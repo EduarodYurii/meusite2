@@ -1,383 +1,265 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel de Presença PRO</title>
-  <style>
-    body { font-family: Arial; background:#f4f4f4; margin:0; }
-    h1 { text-align:center; font-size:20px; }
-
-    .dashboard {
-      display:flex; justify-content:space-around; flex-wrap:wrap;
-      background:#fff; padding:10px; margin:10px; border-radius:10px;
-      box-shadow:0 2px 5px rgba(0,0,0,0.2);
-    }
-    .box { text-align:center; padding:10px; min-width:80px; }
-    .box h3 { margin:0; font-size:14px; }
-    .box p { margin:5px 0 0; font-size:18px; font-weight:bold; }
-
-    .topbar { text-align:center; margin:10px; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; padding:10px; }
-    .card { background:#fff; padding:8px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.2); text-align:center; position:relative; }
-    .card img { width:100%; border-radius:10px; }
-    .status { margin-top:5px; font-size:12px; font-weight:bold; position:relative; cursor:pointer; }
-    .tooltip {
-      display:none;
-      position:absolute;
-      top:20px;
-      left:50%;
-      transform:translateX(-50%);
-      background:#333;
-      color:#fff;
-      padding:5px;
-      border-radius:5px;
-      font-size:10px;
-      white-space:nowrap;
-      z-index:10;
-    }
-    .status:hover .tooltip { display:block; }
-    .presente { color:green; }
-    .falta { color:red; }
-    .folga { color:orange; }
-    .atestado { color:blue; }
-    .botoes { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px; }
-    .botoes button { font-size:11px; padding:5px; border:none; border-radius:5px; }
-    .excluir { position:absolute; top:5px; right:5px; background:red; color:#fff; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:12px; }
-
-    button { margin:3px; padding:6px; font-size:12px; }
-    .login { text-align:center; margin-top:50px; }
-    input, select { padding:6px; margin:3px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Completo</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+body { font-family: Arial; background:#f4f6f9; text-align:center; }
+.login, .app { display:none; }
+.container { display:flex; flex-wrap:wrap; justify-content:center; }
+.card { width:130px; margin:10px; padding:10px; border-radius:15px; background:white; }
+.card img { width:80px; height:80px; border-radius:50%; }
+button{margin:5px;padding:6px;border:none;border-radius:6px;background:#007bff;color:white;cursor:pointer;font-size:12px;}
+.formulario { margin:20px; }
+input, select { padding:8px; margin:5px; border-radius:6px; border:1px solid #ccc; }
+.status-btns { display:flex; flex-wrap:wrap; justify-content:center; }
+.status-btns button { background:#6c757d; }
+.status-btns button.ativo { background:#28a745; }
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;}
+.btn-logout{background:#28a745; margin:0;}
+</style>
 </head>
 <body>
 
-<div id="loginScreen" class="login">
-  <h2>Login</h2>
-  <input type="text" id="usuario" placeholder="Usuário"><br>
-  <input type="password" id="senha" placeholder="Senha"><br>
-  <button onclick="login()">Entrar</button>
+<div class="login" id="login">
+<h2>Login</h2>
+<input type="text" id="user" placeholder="Usuário"><br><br>
+<input type="password" id="pass" placeholder="Senha"><br><br>
+<button onclick="entrar()">Entrar</button>
 </div>
 
-<div id="app" style="display:none">
-  <h1>Controle de Presença</h1>
-
-  <div class="topbar">
-    <strong>Usuário:</strong> <span id="usuarioLogado">-</span>
+<div class="app" id="app">
+<div class="topbar">
+  <div>
+    <h1 style="margin:0">Controle de Presença</h1>
+    <div id="usuarioInfo" style="font-weight:bold"></div>
   </div>
+  <button onclick="trocarUsuario()" class="btn-logout">Trocar Usuário</button>
+</div>
 
-  <div class="topbar">
-    <button onclick="trocarUsuario()">🔄 Trocar Usuário</button>
-  </div>
+<input type="date" id="dataSelecionada" onchange="trocarData()">
 
-  <div class="dashboard">
-    <div class="box"><h3>Presentes</h3><p id="presenteBox">0</p></div>
-    <div class="box"><h3>Faltas</h3><p id="faltaBox">0</p></div>
-    <div class="box"><h3>Folgas</h3><p id="folgaBox">0</p></div>
-    <div class="box"><h3>Absentismo %</h3><p id="absBox">0%</p></div>
-  </div>
+<div id="resumo" style="display:flex;justify-content:center;gap:15px;margin:10px;flex-wrap:wrap"></div>
+<div id="alerta" style="margin:10px;font-weight:bold"></div>
 
-  <div class="topbar">
-    <input type="date" id="data" /><br>
-    <button onclick="limparDia()">Limpar</button>
-    <button onclick="exportarExcel()">Excel</button>
-  </div>
+<div class="formulario">
+<input type="text" id="nomeInput" placeholder="Nome do colaborador">
+<select id="turnoInput">
+<option value="">Selecione o turno</option>
+<option value="Manhã">Manhã</option>
+<option value="Tarde">Tarde</option>
+<option value="Noite">Noite</option>
+</select>
+<input type="file" id="fotoInput" accept="image/*">
+<button onclick="salvarColaborador()">Salvar</button>
+</div>
 
-  <div class="topbar">
-    <input type="text" id="novoNome" placeholder="Nome colaborador">
-    <input type="file" id="novaFoto" accept="image/*">
-    <select id="turno">
-      <option value="1">1º Turno</option>
-      <option value="2">2º Turno</option>
-      <option value="3">3º Turno</option>
-    </select>
-    <button onclick="adicionarColaborador()">Adicionar</button>
-  </div>
-
-  <div class="grid" id="grid"></div>
+<button onclick="exportarExcel()">Exportar Excel do Mês</button>
+<div class="container" id="painel"></div>
 </div>
 
 <script>
-  const usuarios = [
-    { user: "admin", pass: "1234", turno: "all" },
-    { user: "gerente", pass: "1234", turno: "1" },
-    { user: "rh", pass: "1234", turno: "2" },
-    { user: "supervisor", pass: "1234", turno: "3" }
-  ];
+let db = JSON.parse(localStorage.getItem('colabs')||'[]');
+let registros = JSON.parse(localStorage.getItem('registros')||'{}');
+let dataAtual = new Date().toISOString().split('T')[0];
+let fotoBase64 = '';
+let usuarioLogado = null;
+let usuarioNome = '';
 
-  let usuarioAtual = null;
-  let colaboradores = [
-    { nome: "ANDRÉ ALVES DOS SANTOS", foto: "", turno: "1" },
-    { nome: "ANDRE LUIZ DA SILVA E SOUZA", foto: "", turno: "1" },
-    { nome: "ARIANE PEREIRA DA SILVA", foto: "", turno: "1" },
-    { nome: "ARTHUR JUVENAL DA LUZ", foto: "", turno: "1" },
-    { nome: "BRUNA PESSOA CHAVES DE MORAES", foto: "", turno: "1" },
-    { nome: "CAROLINA UMBELINA DE SOUZA", foto: "", turno: "1" },
-    { nome: "DAIARA GIOVANA JESUS DOS SANTOS", foto: "", turno: "1" },
+const usuarios = {
+  bruna: { senha:'123', turno:'Manhã' },
+  marciele: { senha:'123', turno:'Tarde' },
+  pollyanna: { senha:'123', turno:'Noite' },
+  yuri: { senha:'123', turno:'todos' },
+  edimir: { senha:'123', turno:'todos' }
+};
 
-    { nome: "ELIZANGELA BARBOSA GOMES RAMOS", foto: "", turno: "2" },
-    { nome: "GIOVANA STEPHANI DE OLIVEIRA", foto: "", turno: "2" },
-    { nome: "ISABELLE FIGUEIREDO FIRMINO LUCCHETTA", foto: "", turno: "2" },
-    { nome: "JAQUELINE VIVIAN BORGES BARION", foto: "", turno: "2" },
-    { nome: "JESSICA APARECIDA DA SILVA BARBOSA", foto: "", turno: "2" },
-    { nome: "JESSICA DE SOUSA CASTILHO", foto: "", turno: "2" },
+document.getElementById('dataSelecionada').value = dataAtual;
 
-    { nome: "JOSE ROSALINO TEODORO DE GODOI", foto: "", turno: "3" },
-    { nome: "MICHAEL DA SILVA REZENDE", foto: "", turno: "3" },
-    { nome: "MONICA JUVENCIO", foto: "", turno: "3" },
-    { nome: "PAULO CESAR MOREIRA", foto: "", turno: "3" },
-    { nome: "RAFAEL DA SILVA ABREU", foto: "", turno: "3" }
-  ];
+const STATUS = ["FERIAS","BH","P","HE","FOLGA","DSR","AT","F"];
 
-  function login(){
-    const user = document.getElementById("usuario").value;
-    const senha = document.getElementById("senha").value;
+function entrar(){
+ let u = user.value.toLowerCase();
+ let p = pass.value;
 
-    const valido = usuarios.find(u => u.user === user && u.pass === senha);
+ if(usuarios[u] && usuarios[u].senha === p){
+  usuarioLogado = usuarios[u];
+  usuarioNome = u;
+  login.style.display='none';
+  app.style.display='block';
+  document.getElementById('usuarioInfo').innerText = 'Usuário: ' + u.toUpperCase();
+  controlarPermissaoCadastro();
+  render();
+ } else alert('Login inválido');
+}
 
-    if(valido){
-      usuarioAtual = valido;
-      document.getElementById("loginScreen").style.display = "none";
-      document.getElementById("app").style.display = "block";
-      document.getElementById("usuarioLogado").textContent = usuarioAtual.user;
-      carregarColaboradores();
-      render();
-    } else {
-      alert("Usuário ou senha incorretos");
-    }
-  }
+function salvar(){ 
+ localStorage.setItem('colabs', JSON.stringify(db));
+ localStorage.setItem('registros', JSON.stringify(registros));
+}
 
-  function trocarUsuario(){
-    if(!confirm("Deseja trocar de usuário?")) return;
+function trocarData(){
+ dataAtual = dataSelecionada.value;
+ render();
+}
 
-    usuarioAtual = null;
-    document.getElementById("app").style.display = "none";
-    document.getElementById("loginScreen").style.display = "block";
+function getStatus(i){
+ return registros[dataAtual]?.[i] || '';
+}
 
-    document.getElementById("usuario").value = "";
-    document.getElementById("senha").value = "";
-    document.getElementById("usuarioLogado").textContent = "-";
-  }
+function setStatus(i, status){
+ if(!registros[dataAtual]) registros[dataAtual] = {};
 
-  function salvarColaboradores(){
-    localStorage.setItem("colaboradores", JSON.stringify(colaboradores));
-  }
+ if(registros[dataAtual][i] === status){
+   registros[dataAtual][i] = '';
+ } else {
+   registros[dataAtual][i] = status;
+ }
+ salvar(); render();
+}
 
-  function carregarColaboradores(){
-    colaboradores = JSON.parse(localStorage.getItem("colaboradores") || "[]");
-  }
+function limparStatus(i){
+ if(registros[dataAtual]) registros[dataAtual][i] = '';
+ salvar(); render();
+}
 
-  function adicionarColaborador(){
-    const nome = document.getElementById("novoNome").value;
-    const file = document.getElementById("novaFoto").files[0];
-    const turno = document.getElementById("turno").value;
+function podeCadastrar(){
+ return usuarioNome === 'yuri' || usuarioNome === 'edimir';
+}
 
-    if(!nome) return alert("Preencha o nome");
+function controlarPermissaoCadastro(){
+ let form = document.querySelector('.formulario');
+ form.style.display = podeCadastrar() ? 'block' : 'none';
+}
 
-    // verifica se já existe
-    let existente = colaboradores.find(c => c.nome === nome);
+function podeVer(turno){
+ if(!usuarioLogado) return false;
+ if(usuarioLogado.turno === 'todos') return true;
+ return usuarioLogado.turno === turno;
+}
 
-    if(file){
-      const reader = new FileReader();
-      reader.onload = function(e){
-        if(existente){
-          existente.foto = e.target.result;
-        } else {
-          colaboradores.push({ nome, foto: e.target.result, turno });
-        }
-        salvarColaboradores();
-        render();
-      };
-      reader.readAsDataURL(file);
-    } else {
-      if(!existente){
-        colaboradores.push({ nome, foto: "", turno });
-      }
-      salvarColaboradores();
-      render();
-    }
-  });
-      salvarColaboradores();
-      render();
-    };
-    reader.readAsDataURL(file);
-  }
+function calcularResumo(){
+ let total=0, presentes=0, faltas=0, folgas=0, outros=0;
 
-  function excluirColaborador(nome){
-    if(!confirm("Deseja excluir este colaborador?")) return;
-    colaboradores = colaboradores.filter(c => c.nome !== nome);
-    salvarColaboradores();
-    render();
-  }
+ db.forEach((c,i)=>{
+  if(!podeVer(c.turno)) return;
+  total++;
+  let s = getStatus(i);
 
-  const statusList = ["Presente", "Falta", "Folga", "Atestado"];
+  if(s === 'P') presentes++;
+  else if(s === 'F') faltas++;
+  else if(s === 'FOLGA') folgas++;
+  else if(s) outros++;
+ });
 
-  const dataInput = document.getElementById("data");
-  dataInput.value = new Date().toISOString().split("T")[0];
+ let percentualFalta = total ? ((faltas/total)*100).toFixed(1) : 0;
 
-  function salvar(nome, status){
-    const data = dataInput.value;
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
+ document.getElementById('resumo').innerHTML = `
+  <div style="background:#fff;padding:10px;border-radius:10px">Total: ${total}</div>
+  <div style="background:#d4edda;padding:10px;border-radius:10px">Presentes: ${presentes}</div>
+  <div style="background:#f8d7da;padding:10px;border-radius:10px">Faltas: ${faltas}</div>
+  <div style="background:#fff3cd;padding:10px;border-radius:10px">Folgas: ${folgas}</div>
+  <div style="background:#e2e3e5;padding:10px;border-radius:10px">Outros: ${outros}</div>
+  <div style="background:#cfe2ff;padding:10px;border-radius:10px">Absenteísmo: ${percentualFalta}%</div>
+ `;
 
-    if(!banco[data]) banco[data] = {};
+ let alerta = document.getElementById('alerta');
+ if(percentualFalta > 20){
+   alerta.innerText = '🔴 Alerta: Alto índice de absenteísmo!';
+   alerta.style.color = 'red';
+ } else {
+   alerta.innerText = '';
+ }
+}
 
-    if(status === null){
-      delete banco[data][nome];
-    } else {
-      banco[data][nome] = status;
-    }
+function render(){
+ painel.innerHTML='';
+ db.forEach((c,i)=>{
+  if(!podeVer(c.turno)) return;
 
-    localStorage.setItem("presenca", JSON.stringify(banco));
-    atualizarDashboard();
-  }
+  let statusAtual = getStatus(i);
 
-  function carregar(nome){
-    const data = dataInput.value;
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
-    return banco[data]?.[nome] || null;
-  }
+  let botoes = STATUS.map(s => {
+    let ativo = s === statusAtual ? 'ativo' : '';
+    return `<button class="${ativo}" onclick="event.stopPropagation();setStatus(${i},'${s}')">${s}</button>`;
+  }).join('');
 
-  function criarCard(colab) {
-    const card = document.createElement("div");
-    card.className = "card";
+  let div = document.createElement('div');
+  div.className='card';
+  div.innerHTML=`
+    <img src="${c.foto}"><br>
+    ${c.nome}<br>
+    <small>${c.turno}</small><br>
+    <strong>${statusAtual || '-'}</strong>
+    <div class="status-btns">${botoes}</div>
+    <button onclick="event.stopPropagation();limparStatus(${i})" style="background:#dc3545">Limpar</button>
+  `;
 
-    const btnExcluir = document.createElement("button");
-    btnExcluir.textContent = "×";
-    btnExcluir.className = "excluir";
-    btnExcluir.onclick = () => excluirColaborador(colab.nome);
+  painel.appendChild(div);
+ });
 
-    const img = document.createElement("img");
-    img.src = colab.foto || "https://via.placeholder.com/120?text=Sem+Foto";
+ calcularResumo();
+}
 
-    img.onclick = () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
+fotoInput.addEventListener('change', function(e){
+ let reader = new FileReader();
+ reader.onload = function(){ fotoBase64 = reader.result; };
+ if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
+});
 
-      input.onchange = (e) => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function(ev){
-          colab.foto = ev.target.result;
-          salvarColaboradores();
-          render();
-        };
-        if(file) reader.readAsDataURL(file);
-      };
+function salvarColaborador(){
+ let nome = nomeInput.value;
+ let turno = turnoInput.value;
 
-      input.click();
-    };
+ if(!nome || !turno){
+  alert('Preencha nome e turno');
+  return;
+ }
 
-    const nome = document.createElement("p");
-    nome.textContent = colab.nome + " (T" + colab.turno + ")";
+ db.push({ nome, turno, foto: fotoBase64 || 'https://via.placeholder.com/80' });
+ salvar(); render();
 
-    const status = document.createElement("div");
-    const tooltip = document.createElement("div");
-    tooltip.className = "tooltip";
+ nomeInput.value=''; turnoInput.value=''; fotoInput.value=''; fotoBase64='';
+}
 
-    let current = carregar(colab.nome);
+function exportarExcel(){
+ let mes = dataAtual.slice(0,7);
+ let dias = Object.keys(registros)
+   .filter(d => d.startsWith(mes))
+   .sort();
 
-    status.textContent = current || "Não marcado";
-    tooltip.textContent = current === "Falta" ? "Colaborador em absentismo" : "";
-    status.className = "status " + (current ? current.toLowerCase() : "");
-    status.appendChild(tooltip);
+ let dados = [];
 
-    const botoes = document.createElement("div");
-    botoes.className = "botoes";
+ db.forEach((c,i)=>{
+   if(!podeVer(c.turno)) return;
 
-    statusList.forEach(s => {
-      const btn = document.createElement("button");
-      btn.textContent = s;
+   let linha = { Nome: c.nome, Turno: c.turno };
 
-      btn.onclick = () => {
-        if(status.textContent === s){
-          status.textContent = "Não marcado";
-          status.className = "status";
-          salvar(colab.nome, null);
-          tooltip.textContent = "";
-        } else {
-          status.textContent = s;
-          status.className = "status " + s.toLowerCase();
-          salvar(colab.nome, s);
-          tooltip.textContent = s === "Falta" ? "Colaborador em absentismo" : "";
-        }
-      };
+   dias.forEach(dia => {
+     linha[dia] = registros[dia]?.[i] || '';
+   });
 
-      botoes.appendChild(btn);
-    });
+   dados.push(linha);
+ });
 
-    card.appendChild(btnExcluir);
-    card.appendChild(img);
-    card.appendChild(nome);
-    card.appendChild(status);
-    card.appendChild(botoes);
+ let ws = XLSX.utils.json_to_sheet(dados);
+ let wb = XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb, ws, "Histórico Mensal");
+ XLSX.writeFile(wb, `historico_${mes}.xlsx`);
+}
 
-    return card;
-  }
+function trocarUsuario(){
+ usuarioLogado = null;
+ usuarioNome = '';
+ app.style.display='none';
+ login.style.display='block';
+ user.value='';
+ pass.value='';
+}
 
-  function atualizarDashboard(){
-    const data = dataInput.value;
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
-    const dia = banco[data] || {};
-
-    let presente = 0, falta = 0, folga = 0;
-
-    Object.values(dia).forEach(s => {
-      if(s === "Presente") presente++;
-      if(s === "Falta") falta++;
-      if(s === "Folga") folga++;
-    });
-
-    const total = presente + falta + folga;
-    const abs = total ? ((falta / total) * 100).toFixed(1) : 0;
-
-    document.getElementById("presenteBox").textContent = presente;
-    document.getElementById("faltaBox").textContent = falta;
-    document.getElementById("folgaBox").textContent = folga;
-    document.getElementById("absBox").textContent = abs + "%";
-  }
-
-  function render(){
-    const grid = document.getElementById("grid");
-    grid.innerHTML = "";
-
-    let lista = colaboradores;
-    if(usuarioAtual && usuarioAtual.turno !== "all"){
-      lista = colaboradores.filter(c => c.turno === usuarioAtual.turno);
-    }
-
-    lista.forEach(c => grid.appendChild(criarCard(c)));
-    atualizarDashboard();
-  }
-
-  function limparDia(){
-    const data = dataInput.value;
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
-    delete banco[data];
-    localStorage.setItem("presenca", JSON.stringify(banco));
-    render();
-  }
-
-  function exportarExcel(){
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
-    let csv = "Data,Nome,Status\n";
-
-    for(let data in banco){
-      for(let nome in banco[data]){
-        csv += `${data},${nome},${banco[data][nome]}\n`;
-      }
-    }
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "relatorio_presenca.csv";
-    a.click();
-  }
-
-  dataInput.addEventListener("change", render);
+login.style.display='block';
 </script>
 
 </body>
