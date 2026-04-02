@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Presença PRO</title>
+  <style>
+    body { font-family: Arial; background:#f4f4f4; margin:0; }
+    h1 { text-align:center; font-size:20px; }
+
+    .dashboard {
+      display:flex; justify-content:space-around; flex-wrap:wrap;
+      background:#fff; padding:10px; margin:10px; border-radius:10px;
+      box-shadow:0 2px 5px rgba(0,0,0,0.2);
+    }
+    .box {
+      text-align:center; padding:10px; min-width:80px;
+    }
+    .box h3 { margin:0; font-size:14px; }
+    .box p { margin:5px 0 0; font-size:18px; font-weight:bold; }
+
+    .topbar { text-align:center; margin:10px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; padding:10px; }
+    .card { background:#fff; padding:8px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.2); text-align:center; position:relative; }
+    .card img { width:100%; border-radius:10px; }
+    .status { margin-top:5px; font-size:12px; font-weight:bold; }
+    .presente { color:green; }
+    .falta { color:red; }
+    .folga { color:orange; }
+    .atestado { color:blue; }
+    .botoes { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px; }
+    .botoes button { font-size:11px; padding:5px; border:none; border-radius:5px; }
+    .excluir { position:absolute; top:5px; right:5px; background:red; color:#fff; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:12px; }
+
+    button { margin:3px; padding:6px; font-size:12px; }
+    .login { text-align:center; margin-top:50px; }
+    input, select { padding:6px; margin:3px; }
+  </style>
+</head>
+<body>
+
+<div id="loginScreen" class="login">
+  <h2>Login</h2>
+  <input type="text" id="usuario" placeholder="Usuário"><br>
+  <input type="password" id="senha" placeholder="Senha"><br>
+  <button onclick="login()">Entrar</button>
+</div>
+
+<div id="app" style="display:none">
+  <h1>Controle de Presença</h1>
+
+  <div class="dashboard">
+    <div class="box"><h3>Presentes</h3><p id="presenteBox">0</p></div>
+    <div class="box"><h3>Faltas</h3><p id="faltaBox">0</p></div>
+    <div class="box"><h3>Folgas</h3><p id="folgaBox">0</p></div>
+    <div class="box"><h3>Absentismo %</h3><p id="absBox">0%</p></div>
+  </div>
+
+  <div class="topbar">
+    <input type="date" id="data" /><br>
+    <button onclick="limparDia()">Limpar</button>
+    <button onclick="exportarExcel()">Excel</button>
+  </div>
+
+  <div class="topbar">
+    <input type="text" id="novoNome" placeholder="Nome colaborador">
+    <input type="file" id="novaFoto" accept="image/*">
+    <select id="turno">
+      <option value="1">1º Turno</option>
+      <option value="2">2º Turno</option>
+      <option value="3">3º Turno</option>
+    </select>
+    <button onclick="adicionarColaborador()">Adicionar</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+  const usuarios = [
+    { user: "admin", pass: "1234", turno: "all" },
+    { user: "gerente", pass: "1234", turno: "1" },
+    { user: "rh", pass: "1234", turno: "2" },
+    { user: "supervisor", pass: "1234", turno: "3" }
+  ];
+
+  let usuarioAtual = null;
+
+  function login(){
+    const user = document.getElementById("usuario").value;
+    const senha = document.getElementById("senha").value;
+
+    const valido = usuarios.find(u => u.user === user && u.pass === senha);
+
+    if(valido){
+      usuarioAtual = valido;
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      carregarColaboradores();
+      render();
+    } else alert("Usuário ou senha incorretos");
+  }
+
+  let colaboradores = [];
+
+  function salvarColaboradores(){
+    localStorage.setItem("colaboradores", JSON.stringify(colaboradores));
+  }
+
+  function carregarColaboradores(){
+    colaboradores = JSON.parse(localStorage.getItem("colaboradores") || "[]");
+  }
+
+  function adicionarColaborador(){
+    const nome = document.getElementById("novoNome").value;
+    const file = document.getElementById("novaFoto").files[0];
+    const turno = document.getElementById("turno").value;
+
+    if(!nome || !file) return alert("Preencha nome e foto");
+
+    const reader = new FileReader();
+    reader.onload = function(e){
+      colaboradores.push({ nome, foto: e.target.result, turno });
+      salvarColaboradores();
+      render();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function excluirColaborador(nome){
+    if(!confirm("Deseja excluir este colaborador?")) return;
+    colaboradores = colaboradores.filter(c => c.nome !== nome);
+    salvarColaboradores();
+    render();
+  }
+
+  const statusList = ["Presente", "Falta", "Folga", "Atestado"];
+
+  const dataInput = document.getElementById("data");
+  dataInput.value = new Date().toISOString().split("T")[0];
+
+  function salvar(nome, status){
+    const data = dataInput.value;
+    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
+    if(!banco[data]) banco[data] = {};
+    banco[data][nome] = status;
+    localStorage.setItem("presenca", JSON.stringify(banco));
+    atualizarDashboard();
+  }
+
+  function carregar(nome){
+    const data = dataInput.value;
+    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
+    return banco[data]?.[nome] || null;
+  }
+
+  function criarCard(colab) {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const btnExcluir = document.createElement("button");
+    btnExcluir.textContent = "×";
+    btnExcluir.className = "excluir";
+    btnExcluir.onclick = () => excluirColaborador(colab.nome);
+
+    const img = document.createElement("img");
+    img.src = colab.foto;
+
+    const nome = document.createElement("p");
+    nome.textContent = colab.nome + " (T" + colab.turno + ")";
+
+    const status = document.createElement("div");
+
+    let current = carregar(colab.nome);
+
+    status.textContent = current || "Não marcado";
+    status.className = "status " + (current ? current.toLowerCase() : "");
+
+    const botoes = document.createElement("div");
+    botoes.className = "botoes";
+
+    statusList.forEach(s => {
+      const btn = document.createElement("button");
+      btn.textContent = s;
+
+      btn.onclick = () => {
+        status.textContent = s;
+        status.className = "status " + s.toLowerCase();
+        salvar(colab.nome, s);
+      };
+
+      botoes.appendChild(btn);
+    });
+
+    card.appendChild(btnExcluir);
+    card.appendChild(img);
+    card.appendChild(nome);
+    card.appendChild(status);
+    card.appendChild(botoes);
+
+    return card;
+  }
+
+  function atualizarDashboard(){
+    const data = dataInput.value;
+    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
+    const dia = banco[data] || {};
+
+    let presente = 0, falta = 0, folga = 0;
+
+    Object.values(dia).forEach(s => {
+      if(s === "Presente") presente++;
+      if(s === "Falta") falta++;
+      if(s === "Folga") folga++;
+    });
+
+    const total = presente + falta + folga;
+    const abs = total ? ((falta / total) * 100).toFixed(1) : 0;
+
+    document.getElementById("presenteBox").textContent = presente;
+    document.getElementById("faltaBox").textContent = falta;
+    document.getElementById("folgaBox").textContent = folga;
+    document.getElementById("absBox").textContent = abs + "%";
+  }
+
+  function render(){
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+
+    let lista = colaboradores;
+    if(usuarioAtual.turno !== "all"){
+      lista = colaboradores.filter(c => c.turno === usuarioAtual.turno);
+    }
+
+    lista.forEach(c => grid.appendChild(criarCard(c)));
+    atualizarDashboard();
+  }
+
+  function limparDia(){
+    const data = dataInput.value;
+    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
+    delete banco[data];
+    localStorage.setItem("presenca", JSON.stringify(banco));
+    render();
+  }
+
+  function exportarExcel(){
+    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
+    let csv = "Data,Nome,Status\n";
+
+    for(let data in banco){
+      for(let nome in banco[data]){
+        csv += `${data},${nome},${banco[data][nome]}\n`;
+      }
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "relatorio_presenca.csv";
+    a.click();
+  }
+
+  dataInput.addEventListener("change", render);
+</script>
+
+</body>
+</html>
