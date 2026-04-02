@@ -5,22 +5,128 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel Completo</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <style>
 body { font-family: Arial; background:#f4f6f9; text-align:center; }
 .login, .app { display:none; }
 .container { display:flex; flex-wrap:wrap; justify-content:center; }
-.card { width:130px; margin:10px; padding:10px; border-radius:15px; background:white; }
+
+.card {
+  width:130px;
+  margin:10px;
+  padding:10px;
+  border-radius:15px;
+  background:white;
+  position: relative;
+}
+
+/* STATUS TOPO (card) */
+.status-topo {
+  display:inline-block;
+  padding:3px 8px;
+  border-radius:10px;
+  font-size:11px;
+  color:white;
+  margin-bottom:5px;
+}
+
+.status-P { background:#28a745; }
+.status-F { background:#dc3545; }
+.status-BH { background:#6f42c1; }
+.status-AT { background:#fd7e14; }
+.status-FERIAS { background:#0dcaf0; }
+.status-FOLGA { background:#ffc107; color:black; }
+.status-DSR { background:#6c757d; }
+.status-HE { background:#198754; }
+
 .card img { width:80px; height:80px; border-radius:50%; }
-button{margin:5px;padding:6px;border:none;border-radius:6px;background:#007bff;color:white;cursor:pointer;font-size:12px;}
-.formulario { margin:20px; }
-input, select { padding:8px; margin:5px; border-radius:6px; border:1px solid #ccc; }
+
+/* BOTÕES */
+button{
+  margin:5px;padding:6px;border:none;border-radius:6px;
+  background:#007bff;color:white;cursor:pointer;font-size:12px;
+}
+
 .status-btns { display:flex; flex-wrap:wrap; justify-content:center; }
 .status-btns button { background:#6c757d; }
 .status-btns button.ativo { background:#28a745; }
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;}
-.btn-logout{background:#28a745; margin:0;}
+
+/* EXCLUIR */
+.btn-excluir {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* LISTA AUSENTES */
+.lista-ausentes {
+  position: fixed;
+  right: 15px;
+  bottom: 15px;
+  width: 220px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  font-size: 13px;
+  text-align: left;
+}
+
+/* RESUMO TOPO */
+#resumo {
+  margin:10px;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:10px;
+}
+
+.box-resumo {
+  padding:8px 12px;
+  border-radius:8px;
+  font-size:13px;
+  color:white;
+  font-weight:bold;
+}
+
+.resumo-total { background:#343a40; }
+.resumo-P { background:#28a745; }
+.resumo-F { background:#dc3545; }
+.resumo-BH { background:#6f42c1; }
+.resumo-AT { background:#fd7e14; }
+.resumo-FERIAS { background:#0dcaf0; }
+.resumo-FOLGA { background:#ffc107; color:black; }
+.resumo-DSR { background:#6c757d; }
+.resumo-HE { background:#198754; }
+
+/* TOPO */
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 20px;
+}
+
+.btn-logout{
+  background:#28a745;
+  color:white;
+  padding:8px 12px;
+  border-radius:8px;
+}
 </style>
 </head>
+
 <body>
 
 <div class="login" id="login">
@@ -31,78 +137,46 @@ input, select { padding:8px; margin:5px; border-radius:6px; border:1px solid #cc
 </div>
 
 <div class="app" id="app">
+
 <div class="topbar">
   <div>
     <h1 style="margin:0">Controle de Presença</h1>
-    <div id="usuarioInfo" style="font-weight:bold"></div>
+    <div id="usuarioInfo"></div>
   </div>
   <button onclick="trocarUsuario()" class="btn-logout">Trocar Usuário</button>
 </div>
 
-<input type="date" id="dataSelecionada" onchange="trocarData()">
+<input type="date" id="dataSelecionada">
 
-<div id="resumo" style="display:flex;justify-content:center;gap:15px;margin:10px;flex-wrap:wrap"></div>
-<div id="alerta" style="margin:10px;font-weight:bold"></div>
+<div id="resumo"></div>
 
-<div class="formulario">
-<input type="text" id="nomeInput" placeholder="Nome do colaborador">
-<select id="turnoInput">
-<option value="">Selecione o turno</option>
-<option value="Manhã">Manhã</option>
-<option value="Tarde">Tarde</option>
-<option value="Noite">Noite</option>
-</select>
-<input type="file" id="fotoInput" accept="image/*">
-<button onclick="salvarColaborador()">Salvar</button>
+<div class="container" id="painel"></div>
+
+<div class="lista-ausentes">
+  <h3>🚨 Ausentes</h3>
+  <ul id="listaAusentesConteudo"></ul>
 </div>
 
-<button onclick="exportarExcel()">Exportar Excel do Mês</button>
-<div class="container" id="painel"></div>
 </div>
 
 <script>
 let db = JSON.parse(localStorage.getItem('colabs')||'[]');
 let registros = JSON.parse(localStorage.getItem('registros')||'{}');
 let dataAtual = new Date().toISOString().split('T')[0];
-let fotoBase64 = '';
-let usuarioLogado = null;
 let usuarioNome = '';
-
-const usuarios = {
-  bruna: { senha:'123', turno:'Manhã' },
-  marciele: { senha:'123', turno:'Tarde' },
-  pollyanna: { senha:'123', turno:'Noite' },
-  yuri: { senha:'123', turno:'todos' },
-  edimir: { senha:'123', turno:'todos' }
-};
-
-document.getElementById('dataSelecionada').value = dataAtual;
 
 const STATUS = ["FERIAS","BH","P","HE","FOLGA","DSR","AT","F"];
 
 function entrar(){
- let u = user.value.toLowerCase();
- let p = pass.value;
-
- if(usuarios[u] && usuarios[u].senha === p){
-  usuarioLogado = usuarios[u];
-  usuarioNome = u;
-  login.style.display='none';
-  app.style.display='block';
-  document.getElementById('usuarioInfo').innerText = 'Usuário: ' + u.toUpperCase();
-  controlarPermissaoCadastro();
-  render();
- } else alert('Login inválido');
+ usuarioNome = user.value.toLowerCase();
+ login.style.display='none';
+ app.style.display='block';
+ render();
 }
 
-function salvar(){ 
+function salvar(){
  localStorage.setItem('colabs', JSON.stringify(db));
  localStorage.setItem('registros', JSON.stringify(registros));
-}
-
-function trocarData(){
- dataAtual = dataSelecionada.value;
- render();
 }
 
 function getStatus(i){
@@ -111,17 +185,7 @@ function getStatus(i){
 
 function setStatus(i, status){
  if(!registros[dataAtual]) registros[dataAtual] = {};
-
- if(registros[dataAtual][i] === status){
-   registros[dataAtual][i] = '';
- } else {
-   registros[dataAtual][i] = status;
- }
- salvar(); render();
-}
-
-function limparStatus(i){
- if(registros[dataAtual]) registros[dataAtual][i] = '';
+ registros[dataAtual][i] = registros[dataAtual][i] === status ? '' : status;
  salvar(); render();
 }
 
@@ -129,134 +193,84 @@ function podeCadastrar(){
  return usuarioNome === 'yuri' || usuarioNome === 'edimir';
 }
 
-function controlarPermissaoCadastro(){
- let form = document.querySelector('.formulario');
- form.style.display = podeCadastrar() ? 'block' : 'none';
+function excluirColaborador(index){
+ if(!confirm('Excluir colaborador?')) return;
+ db.splice(index,1);
+ salvar();
+ render();
 }
 
-function podeVer(turno){
- if(!usuarioLogado) return false;
- if(usuarioLogado.turno === 'todos') return true;
- return usuarioLogado.turno === turno;
-}
-
+/* RESUMO COLORIDO */
 function calcularResumo(){
- let total=0, presentes=0, faltas=0, folgas=0, outros=0;
+ let total = db.length;
+ let contagem = {};
+ STATUS.forEach(s => contagem[s] = 0);
 
  db.forEach((c,i)=>{
-  if(!podeVer(c.turno)) return;
-  total++;
-  let s = getStatus(i);
-
-  if(s === 'P') presentes++;
-  else if(s === 'F') faltas++;
-  else if(s === 'FOLGA') folgas++;
-  else if(s) outros++;
+   let s = getStatus(i);
+   if(s && contagem[s] !== undefined){
+     contagem[s]++;
+   }
  });
 
- let percentualFalta = total ? ((faltas/total)*100).toFixed(1) : 0;
+ let html = `<div class="box-resumo resumo-total">Total: ${total}</div>`;
 
- document.getElementById('resumo').innerHTML = `
-  <div style="background:#fff;padding:10px;border-radius:10px">Total: ${total}</div>
-  <div style="background:#d4edda;padding:10px;border-radius:10px">Presentes: ${presentes}</div>
-  <div style="background:#f8d7da;padding:10px;border-radius:10px">Faltas: ${faltas}</div>
-  <div style="background:#fff3cd;padding:10px;border-radius:10px">Folgas: ${folgas}</div>
-  <div style="background:#e2e3e5;padding:10px;border-radius:10px">Outros: ${outros}</div>
-  <div style="background:#cfe2ff;padding:10px;border-radius:10px">Absenteísmo: ${percentualFalta}%</div>
- `;
+ STATUS.forEach(s=>{
+   html += `<div class="box-resumo resumo-${s}">${s}: ${contagem[s]}</div>`;
+ });
 
- let alerta = document.getElementById('alerta');
- if(percentualFalta > 20){
-   alerta.innerText = '🔴 Alerta: Alto índice de absenteísmo!';
-   alerta.style.color = 'red';
- } else {
-   alerta.innerText = '';
- }
+ document.getElementById('resumo').innerHTML = html;
+}
+
+/* AUSENTES */
+function atualizarListaAusentes(){
+ let lista = document.getElementById('listaAusentesConteudo');
+ lista.innerHTML = '';
+ const AUSENTES = ["F","BH","AT","FERIAS"];
+
+ db.forEach((c,i)=>{
+  let s = getStatus(i);
+  if(AUSENTES.includes(s)){
+    let li = document.createElement('li');
+    li.innerText = `${c.nome} (${s})`;
+    lista.appendChild(li);
+  }
+ });
 }
 
 function render(){
  painel.innerHTML='';
- db.forEach((c,i)=>{
-  if(!podeVer(c.turno)) return;
 
+ db.forEach((c,i)=>{
   let statusAtual = getStatus(i);
 
-  let botoes = STATUS.map(s => {
-    let ativo = s === statusAtual ? 'ativo' : '';
-    return `<button class="${ativo}" onclick="event.stopPropagation();setStatus(${i},'${s}')">${s}</button>`;
+  let botoes = STATUS.map(s=>{
+    let ativo = s === statusAtual ? 'ativo':'';
+    return `<button class="${ativo}" onclick="setStatus(${i},'${s}')">${s}</button>`;
   }).join('');
 
   let div = document.createElement('div');
   div.className='card';
+
   div.innerHTML=`
-    <img src="${c.foto}"><br>
-    ${c.nome}<br>
-    <small>${c.turno}</small><br>
-    <strong>${statusAtual || '-'}</strong>
+    ${podeCadastrar() ? `<div class="btn-excluir" onclick="excluirColaborador(${i})">×</div>`:''}
+
+    <div class="status-topo ${statusAtual ? 'status-'+statusAtual : ''}">
+      ${statusAtual || '-'}
+    </div>
+
+    <img src="${c.foto}">
+    <br>${c.nome}
+    <br><small>${c.turno}</small>
+
     <div class="status-btns">${botoes}</div>
-    <button onclick="event.stopPropagation();limparStatus(${i})" style="background:#dc3545">Limpar</button>
   `;
 
   painel.appendChild(div);
  });
 
  calcularResumo();
-}
-
-fotoInput.addEventListener('change', function(e){
- let reader = new FileReader();
- reader.onload = function(){ fotoBase64 = reader.result; };
- if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
-});
-
-function salvarColaborador(){
- let nome = nomeInput.value;
- let turno = turnoInput.value;
-
- if(!nome || !turno){
-  alert('Preencha nome e turno');
-  return;
- }
-
- db.push({ nome, turno, foto: fotoBase64 || 'https://via.placeholder.com/80' });
- salvar(); render();
-
- nomeInput.value=''; turnoInput.value=''; fotoInput.value=''; fotoBase64='';
-}
-
-function exportarExcel(){
- let mes = dataAtual.slice(0,7);
- let dias = Object.keys(registros)
-   .filter(d => d.startsWith(mes))
-   .sort();
-
- let dados = [];
-
- db.forEach((c,i)=>{
-   if(!podeVer(c.turno)) return;
-
-   let linha = { Nome: c.nome, Turno: c.turno };
-
-   dias.forEach(dia => {
-     linha[dia] = registros[dia]?.[i] || '';
-   });
-
-   dados.push(linha);
- });
-
- let ws = XLSX.utils.json_to_sheet(dados);
- let wb = XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(wb, ws, "Histórico Mensal");
- XLSX.writeFile(wb, `historico_${mes}.xlsx`);
-}
-
-function trocarUsuario(){
- usuarioLogado = null;
- usuarioNome = '';
- app.style.display='none';
- login.style.display='block';
- user.value='';
- pass.value='';
+ atualizarListaAusentes();
 }
 
 login.style.display='block';
