@@ -21,7 +21,22 @@
     .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; padding:10px; }
     .card { background:#fff; padding:8px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.2); text-align:center; position:relative; }
     .card img { width:100%; border-radius:10px; }
-    .status { margin-top:5px; font-size:12px; font-weight:bold; }
+    .status { margin-top:5px; font-size:12px; font-weight:bold; position:relative; cursor:pointer; }
+    .tooltip {
+      display:none;
+      position:absolute;
+      top:20px;
+      left:50%;
+      transform:translateX(-50%);
+      background:#333;
+      color:#fff;
+      padding:5px;
+      border-radius:5px;
+      font-size:10px;
+      white-space:nowrap;
+      z-index:10;
+    }
+    .status:hover .tooltip { display:block; }
     .presente { color:green; }
     .falta { color:red; }
     .folga { color:orange; }
@@ -91,7 +106,28 @@
   ];
 
   let usuarioAtual = null;
-  let colaboradores = [];
+  let colaboradores = [
+    { nome: "ANDRÉ ALVES DOS SANTOS", foto: "", turno: "1" },
+    { nome: "ANDRE LUIZ DA SILVA E SOUZA", foto: "", turno: "1" },
+    { nome: "ARIANE PEREIRA DA SILVA", foto: "", turno: "1" },
+    { nome: "ARTHUR JUVENAL DA LUZ", foto: "", turno: "1" },
+    { nome: "BRUNA PESSOA CHAVES DE MORAES", foto: "", turno: "1" },
+    { nome: "CAROLINA UMBELINA DE SOUZA", foto: "", turno: "1" },
+    { nome: "DAIARA GIOVANA JESUS DOS SANTOS", foto: "", turno: "1" },
+
+    { nome: "ELIZANGELA BARBOSA GOMES RAMOS", foto: "", turno: "2" },
+    { nome: "GIOVANA STEPHANI DE OLIVEIRA", foto: "", turno: "2" },
+    { nome: "ISABELLE FIGUEIREDO FIRMINO LUCCHETTA", foto: "", turno: "2" },
+    { nome: "JAQUELINE VIVIAN BORGES BARION", foto: "", turno: "2" },
+    { nome: "JESSICA APARECIDA DA SILVA BARBOSA", foto: "", turno: "2" },
+    { nome: "JESSICA DE SOUSA CASTILHO", foto: "", turno: "2" },
+
+    { nome: "JOSE ROSALINO TEODORO DE GODOI", foto: "", turno: "3" },
+    { nome: "MICHAEL DA SILVA REZENDE", foto: "", turno: "3" },
+    { nome: "MONICA JUVENCIO", foto: "", turno: "3" },
+    { nome: "PAULO CESAR MOREIRA", foto: "", turno: "3" },
+    { nome: "RAFAEL DA SILVA ABREU", foto: "", turno: "3" }
+  ];
 
   function login(){
     const user = document.getElementById("usuario").value;
@@ -136,11 +172,31 @@
     const file = document.getElementById("novaFoto").files[0];
     const turno = document.getElementById("turno").value;
 
-    if(!nome || !file) return alert("Preencha nome e foto");
+    if(!nome) return alert("Preencha o nome");
 
-    const reader = new FileReader();
-    reader.onload = function(e){
-      colaboradores.push({ nome, foto: e.target.result, turno });
+    // verifica se já existe
+    let existente = colaboradores.find(c => c.nome === nome);
+
+    if(file){
+      const reader = new FileReader();
+      reader.onload = function(e){
+        if(existente){
+          existente.foto = e.target.result;
+        } else {
+          colaboradores.push({ nome, foto: e.target.result, turno });
+        }
+        salvarColaboradores();
+        render();
+      };
+      reader.readAsDataURL(file);
+    } else {
+      if(!existente){
+        colaboradores.push({ nome, foto: "", turno });
+      }
+      salvarColaboradores();
+      render();
+    }
+  });
       salvarColaboradores();
       render();
     };
@@ -191,17 +247,40 @@
     btnExcluir.onclick = () => excluirColaborador(colab.nome);
 
     const img = document.createElement("img");
-    img.src = colab.foto;
+    img.src = colab.foto || "https://via.placeholder.com/120?text=Sem+Foto";
+
+    img.onclick = () => {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = function(ev){
+          colab.foto = ev.target.result;
+          salvarColaboradores();
+          render();
+        };
+        if(file) reader.readAsDataURL(file);
+      };
+
+      input.click();
+    };
 
     const nome = document.createElement("p");
     nome.textContent = colab.nome + " (T" + colab.turno + ")";
 
     const status = document.createElement("div");
+    const tooltip = document.createElement("div");
+    tooltip.className = "tooltip";
 
     let current = carregar(colab.nome);
 
     status.textContent = current || "Não marcado";
+    tooltip.textContent = current === "Falta" ? "Colaborador em absentismo" : "";
     status.className = "status " + (current ? current.toLowerCase() : "");
+    status.appendChild(tooltip);
 
     const botoes = document.createElement("div");
     botoes.className = "botoes";
@@ -215,10 +294,12 @@
           status.textContent = "Não marcado";
           status.className = "status";
           salvar(colab.nome, null);
+          tooltip.textContent = "";
         } else {
           status.textContent = s;
           status.className = "status " + s.toLowerCase();
           salvar(colab.nome, s);
+          tooltip.textContent = s === "Falta" ? "Colaborador em absentismo" : "";
         }
       };
 
