@@ -13,9 +13,7 @@
       background:#fff; padding:10px; margin:10px; border-radius:10px;
       box-shadow:0 2px 5px rgba(0,0,0,0.2);
     }
-    .box {
-      text-align:center; padding:10px; min-width:80px;
-    }
+    .box { text-align:center; padding:10px; min-width:80px; }
     .box h3 { margin:0; font-size:14px; }
     .box p { margin:5px 0 0; font-size:18px; font-weight:bold; }
 
@@ -48,6 +46,14 @@
 
 <div id="app" style="display:none">
   <h1>Controle de Presença</h1>
+
+  <div class="topbar">
+    <strong>Usuário:</strong> <span id="usuarioLogado">-</span>
+  </div>
+
+  <div class="topbar">
+    <button onclick="trocarUsuario()">🔄 Trocar Usuário</button>
+  </div>
 
   <div class="dashboard">
     <div class="box"><h3>Presentes</h3><p id="presenteBox">0</p></div>
@@ -85,6 +91,7 @@
   ];
 
   let usuarioAtual = null;
+  let colaboradores = [];
 
   function login(){
     const user = document.getElementById("usuario").value;
@@ -96,12 +103,25 @@
       usuarioAtual = valido;
       document.getElementById("loginScreen").style.display = "none";
       document.getElementById("app").style.display = "block";
+      document.getElementById("usuarioLogado").textContent = usuarioAtual.user;
       carregarColaboradores();
       render();
-    } else alert("Usuário ou senha incorretos");
+    } else {
+      alert("Usuário ou senha incorretos");
+    }
   }
 
-  let colaboradores = [];
+  function trocarUsuario(){
+    if(!confirm("Deseja trocar de usuário?")) return;
+
+    usuarioAtual = null;
+    document.getElementById("app").style.display = "none";
+    document.getElementById("loginScreen").style.display = "block";
+
+    document.getElementById("usuario").value = "";
+    document.getElementById("senha").value = "";
+    document.getElementById("usuarioLogado").textContent = "-";
+  }
 
   function salvarColaboradores(){
     localStorage.setItem("colaboradores", JSON.stringify(colaboradores));
@@ -142,8 +162,15 @@
   function salvar(nome, status){
     const data = dataInput.value;
     const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
+
     if(!banco[data]) banco[data] = {};
-    banco[data][nome] = status;
+
+    if(status === null){
+      delete banco[data][nome];
+    } else {
+      banco[data][nome] = status;
+    }
+
     localStorage.setItem("presenca", JSON.stringify(banco));
     atualizarDashboard();
   }
@@ -184,9 +211,15 @@
       btn.textContent = s;
 
       btn.onclick = () => {
-        status.textContent = s;
-        status.className = "status " + s.toLowerCase();
-        salvar(colab.nome, s);
+        if(status.textContent === s){
+          status.textContent = "Não marcado";
+          status.className = "status";
+          salvar(colab.nome, null);
+        } else {
+          status.textContent = s;
+          status.className = "status " + s.toLowerCase();
+          salvar(colab.nome, s);
+        }
       };
 
       botoes.appendChild(btn);
@@ -228,7 +261,7 @@
     grid.innerHTML = "";
 
     let lista = colaboradores;
-    if(usuarioAtual.turno !== "all"){
+    if(usuarioAtual && usuarioAtual.turno !== "all"){
       lista = colaboradores.filter(c => c.turno === usuarioAtual.turno);
     }
 
