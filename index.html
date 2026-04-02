@@ -41,6 +41,17 @@
 <body>
 
 <div id="loginScreen" class="topbar">
+  <h3>Cadastrar novo usuário</h3>
+  <input type="text" id="novoUser" placeholder="Usuário">
+  <input type="password" id="novaSenha" placeholder="Senha">
+  <select id="novoUserTurno">
+    <option value="all">Admin</option>
+    <option value="1">1º Turno</option>
+    <option value="2">2º Turno</option>
+    <option value="3">3º Turno</option>
+  </select>
+  <button onclick="adicionarUsuario()">Criar Usuário</button>
+  <hr>
   <h2>Login</h2>
   <input type="text" id="usuario" placeholder="Usuário"><br>
   <input type="password" id="senha" placeholder="Senha"><br>
@@ -78,7 +89,7 @@
 </div>
 
 <script>
-  const usuarios = [
+  let usuarios = [
     { user: "admin", pass: "1234", turno: "all" },
     { user: "gerente", pass: "1234", turno: "1" },
     { user: "rh", pass: "1234", turno: "2" },
@@ -91,6 +102,20 @@
     { nome: "ANDRÉ ALVES DOS SANTOS", turno: "1", foto:null },
     { nome: "ANDRE LUIZ DA SILVA E SOUZA", turno: "1", foto:null }
   ];
+
+  function adicionarUsuario(){
+    const user = document.getElementById('novoUser').value;
+    const pass = document.getElementById('novaSenha').value;
+    const turno = document.getElementById('novoUserTurno').value;
+
+    if(!user || !pass) return alert('Preencha usuário e senha');
+
+    usuarios.push({user, pass, turno});
+    alert('Usuário criado com sucesso');
+
+    document.getElementById('novoUser').value='';
+    document.getElementById('novaSenha').value='';
+  }
 
   function login(){
     const user = document.getElementById("usuario").value;
