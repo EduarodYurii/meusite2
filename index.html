@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel de Presença PRO</title>
+
   <style>
     body { font-family: Arial; background:#f4f4f4; margin:0; }
     h1 { text-align:center; font-size:20px; }
@@ -13,41 +14,81 @@
       background:#fff; padding:10px; margin:10px; border-radius:10px;
       box-shadow:0 2px 5px rgba(0,0,0,0.2);
     }
+
     .box { text-align:center; padding:10px; min-width:80px; }
     .box h3 { margin:0; font-size:14px; }
     .box p { margin:5px 0 0; font-size:18px; font-weight:bold; }
 
     .topbar { text-align:center; margin:10px; }
-    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; padding:10px; }
-    .card { background:#fff; padding:8px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.2); text-align:center; position:relative; }
-    .card img { width:100%; border-radius:10px; }
-    .status { margin-top:5px; font-size:12px; font-weight:bold; position:relative; cursor:pointer; }
-    .tooltip {
-      display:none;
-      position:absolute;
-      top:20px;
-      left:50%;
-      transform:translateX(-50%);
-      background:#333;
-      color:#fff;
-      padding:5px;
-      border-radius:5px;
-      font-size:10px;
-      white-space:nowrap;
-      z-index:10;
+
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+      gap:10px;
+      padding:10px;
     }
-    .status:hover .tooltip { display:block; }
+
+    .card {
+      background:#fff;
+      padding:8px;
+      border-radius:10px;
+      box-shadow:0 2px 5px rgba(0,0,0,0.2);
+      text-align:center;
+      position:relative;
+    }
+
+    .card img {
+      width:100%;
+      border-radius:10px;
+    }
+
+    .status {
+      margin-top:5px;
+      font-size:12px;
+      font-weight:bold;
+      position:relative;
+    }
+
     .presente { color:green; }
     .falta { color:red; }
     .folga { color:orange; }
     .atestado { color:blue; }
-    .botoes { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px; }
-    .botoes button { font-size:11px; padding:5px; border:none; border-radius:5px; }
-    .excluir { position:absolute; top:5px; right:5px; background:red; color:#fff; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer; font-size:12px; }
+
+    .botoes {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:5px;
+      margin-top:5px;
+    }
+
+    .botoes button {
+      font-size:11px;
+      padding:5px;
+      border:none;
+      border-radius:5px;
+    }
+
+    .excluir {
+      position:absolute;
+      top:5px;
+      right:5px;
+      background:red;
+      color:#fff;
+      border:none;
+      border-radius:50%;
+      width:20px;
+      height:20px;
+      cursor:pointer;
+      font-size:12px;
+    }
 
     button { margin:3px; padding:6px; font-size:12px; }
     .login { text-align:center; margin-top:50px; }
     input, select { padding:6px; margin:3px; }
+
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
@@ -83,17 +124,6 @@
     <button onclick="exportarExcel()">Excel</button>
   </div>
 
-  <div class="topbar">
-    <input type="text" id="novoNome" placeholder="Nome colaborador">
-    <input type="file" id="novaFoto" accept="image/*">
-    <select id="turno">
-      <option value="1">1º Turno</option>
-      <option value="2">2º Turno</option>
-      <option value="3">3º Turno</option>
-    </select>
-    <button onclick="adicionarColaborador()">Adicionar</button>
-  </div>
-
   <div class="grid" id="grid"></div>
 </div>
 
@@ -106,28 +136,6 @@
   ];
 
   let usuarioAtual = null;
-  let colaboradores = [
-    { nome: "ANDRÉ ALVES DOS SANTOS", foto: "", turno: "1" },
-    { nome: "ANDRE LUIZ DA SILVA E SOUZA", foto: "", turno: "1" },
-    { nome: "ARIANE PEREIRA DA SILVA", foto: "", turno: "1" },
-    { nome: "ARTHUR JUVENAL DA LUZ", foto: "", turno: "1" },
-    { nome: "BRUNA PESSOA CHAVES DE MORAES", foto: "", turno: "1" },
-    { nome: "CAROLINA UMBELINA DE SOUZA", foto: "", turno: "1" },
-    { nome: "DAIARA GIOVANA JESUS DOS SANTOS", foto: "", turno: "1" },
-
-    { nome: "ELIZANGELA BARBOSA GOMES RAMOS", foto: "", turno: "2" },
-    { nome: "GIOVANA STEPHANI DE OLIVEIRA", foto: "", turno: "2" },
-    { nome: "ISABELLE FIGUEIREDO FIRMINO LUCCHETTA", foto: "", turno: "2" },
-    { nome: "JAQUELINE VIVIAN BORGES BARION", foto: "", turno: "2" },
-    { nome: "JESSICA APARECIDA DA SILVA BARBOSA", foto: "", turno: "2" },
-    { nome: "JESSICA DE SOUSA CASTILHO", foto: "", turno: "2" },
-
-    { nome: "JOSE ROSALINO TEODORO DE GODOI", foto: "", turno: "3" },
-    { nome: "MICHAEL DA SILVA REZENDE", foto: "", turno: "3" },
-    { nome: "MONICA JUVENCIO", foto: "", turno: "3" },
-    { nome: "PAULO CESAR MOREIRA", foto: "", turno: "3" },
-    { nome: "RAFAEL DA SILVA ABREU", foto: "", turno: "3" }
-  ];
 
   function login(){
     const user = document.getElementById("usuario").value;
@@ -140,7 +148,6 @@
       document.getElementById("loginScreen").style.display = "none";
       document.getElementById("app").style.display = "block";
       document.getElementById("usuarioLogado").textContent = usuarioAtual.user;
-      carregarColaboradores();
       render();
     } else {
       alert("Usuário ou senha incorretos");
@@ -159,183 +166,29 @@
     document.getElementById("usuarioLogado").textContent = "-";
   }
 
-  function salvarColaboradores(){
-    localStorage.setItem("colaboradores", JSON.stringify(colaboradores));
-  }
-
-  function carregarColaboradores(){
-    colaboradores = JSON.parse(localStorage.getItem("colaboradores") || "[]");
-  }
-
-  function adicionarColaborador(){
-    const nome = document.getElementById("novoNome").value;
-    const file = document.getElementById("novaFoto").files[0];
-    const turno = document.getElementById("turno").value;
-
-    if(!nome) return alert("Preencha o nome");
-
-    // verifica se já existe
-    let existente = colaboradores.find(c => c.nome === nome);
-
-    if(file){
-      const reader = new FileReader();
-      reader.onload = function(e){
-        if(existente){
-          existente.foto = e.target.result;
-        } else {
-          colaboradores.push({ nome, foto: e.target.result, turno });
-        }
-        salvarColaboradores();
-        render();
-      };
-      reader.readAsDataURL(file);
-    } else {
-      if(!existente){
-        colaboradores.push({ nome, foto: "", turno });
-      }
-      salvarColaboradores();
-      render();
-    }
-  });
-      salvarColaboradores();
-      render();
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function excluirColaborador(nome){
-    if(!confirm("Deseja excluir este colaborador?")) return;
-    colaboradores = colaboradores.filter(c => c.nome !== nome);
-    salvarColaboradores();
-    render();
-  }
-
-  const statusList = ["Presente", "Falta", "Folga", "Atestado"];
+  const colaboradores = [
+    { nome: "ANDRÉ ALVES DOS SANTOS", turno: "1" },
+    { nome: "ANDRE LUIZ DA SILVA E SOUZA", turno: "1" },
+    { nome: "ARIANE PEREIRA DA SILVA", turno: "1" },
+    { nome: "ARTHUR JUVENAL DA LUZ", turno: "1" },
+    { nome: "BRUNA PESSOA CHAVES DE MORAES", turno: "1" },
+    { nome: "CAROLINA UMBELINA DE SOUZA", turno: "1" },
+    { nome: "DAIARA GIOVANA JESUS DOS SANTOS", turno: "1" },
+    { nome: "ELIZANGELA BARBOSA GOMES RAMOS", turno: "2" },
+    { nome: "GIOVANA STEPHANI DE OLIVEIRA", turno: "2" },
+    { nome: "ISABELLE FIGUEIREDO FIRMINO LUCCHETTA", turno: "2" },
+    { nome: "JAQUELINE VIVIAN BORGES BARION", turno: "2" },
+    { nome: "JESSICA APARECIDA DA SILVA BARBOSA", turno: "2" },
+    { nome: "JESSICA DE SOUSA CASTILHO", turno: "2" },
+    { nome: "JOSE ROSALINO TEODORO DE GODOI", turno: "3" },
+    { nome: "MICHAEL DA SILVA REZENDE", turno: "3" },
+    { nome: "MONICA JUVENCIO", turno: "3" },
+    { nome: "PAULO CESAR MOREIRA", turno: "3" },
+    { nome: "RAFAEL DA SILVA ABREU", turno: "3" }
+  ];
 
   const dataInput = document.getElementById("data");
   dataInput.value = new Date().toISOString().split("T")[0];
-
-  function salvar(nome, status){
-    const data = dataInput.value;
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
-
-    if(!banco[data]) banco[data] = {};
-
-    if(status === null){
-      delete banco[data][nome];
-    } else {
-      banco[data][nome] = status;
-    }
-
-    localStorage.setItem("presenca", JSON.stringify(banco));
-    atualizarDashboard();
-  }
-
-  function carregar(nome){
-    const data = dataInput.value;
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
-    return banco[data]?.[nome] || null;
-  }
-
-  function criarCard(colab) {
-    const card = document.createElement("div");
-    card.className = "card";
-
-    const btnExcluir = document.createElement("button");
-    btnExcluir.textContent = "×";
-    btnExcluir.className = "excluir";
-    btnExcluir.onclick = () => excluirColaborador(colab.nome);
-
-    const img = document.createElement("img");
-    img.src = colab.foto || "https://via.placeholder.com/120?text=Sem+Foto";
-
-    img.onclick = () => {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-
-      input.onchange = (e) => {
-        const file = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = function(ev){
-          colab.foto = ev.target.result;
-          salvarColaboradores();
-          render();
-        };
-        if(file) reader.readAsDataURL(file);
-      };
-
-      input.click();
-    };
-
-    const nome = document.createElement("p");
-    nome.textContent = colab.nome + " (T" + colab.turno + ")";
-
-    const status = document.createElement("div");
-    const tooltip = document.createElement("div");
-    tooltip.className = "tooltip";
-
-    let current = carregar(colab.nome);
-
-    status.textContent = current || "Não marcado";
-    tooltip.textContent = current === "Falta" ? "Colaborador em absentismo" : "";
-    status.className = "status " + (current ? current.toLowerCase() : "");
-    status.appendChild(tooltip);
-
-    const botoes = document.createElement("div");
-    botoes.className = "botoes";
-
-    statusList.forEach(s => {
-      const btn = document.createElement("button");
-      btn.textContent = s;
-
-      btn.onclick = () => {
-        if(status.textContent === s){
-          status.textContent = "Não marcado";
-          status.className = "status";
-          salvar(colab.nome, null);
-          tooltip.textContent = "";
-        } else {
-          status.textContent = s;
-          status.className = "status " + s.toLowerCase();
-          salvar(colab.nome, s);
-          tooltip.textContent = s === "Falta" ? "Colaborador em absentismo" : "";
-        }
-      };
-
-      botoes.appendChild(btn);
-    });
-
-    card.appendChild(btnExcluir);
-    card.appendChild(img);
-    card.appendChild(nome);
-    card.appendChild(status);
-    card.appendChild(botoes);
-
-    return card;
-  }
-
-  function atualizarDashboard(){
-    const data = dataInput.value;
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
-    const dia = banco[data] || {};
-
-    let presente = 0, falta = 0, folga = 0;
-
-    Object.values(dia).forEach(s => {
-      if(s === "Presente") presente++;
-      if(s === "Falta") falta++;
-      if(s === "Folga") folga++;
-    });
-
-    const total = presente + falta + folga;
-    const abs = total ? ((falta / total) * 100).toFixed(1) : 0;
-
-    document.getElementById("presenteBox").textContent = presente;
-    document.getElementById("faltaBox").textContent = falta;
-    document.getElementById("folgaBox").textContent = folga;
-    document.getElementById("absBox").textContent = abs + "%";
-  }
 
   function render(){
     const grid = document.getElementById("grid");
@@ -346,38 +199,13 @@
       lista = colaboradores.filter(c => c.turno === usuarioAtual.turno);
     }
 
-    lista.forEach(c => grid.appendChild(criarCard(c)));
-    atualizarDashboard();
+    lista.forEach(c => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `<p>${c.nome}</p><p>Turno ${c.turno}</p>`;
+      grid.appendChild(card);
+    });
   }
-
-  function limparDia(){
-    const data = dataInput.value;
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
-    delete banco[data];
-    localStorage.setItem("presenca", JSON.stringify(banco));
-    render();
-  }
-
-  function exportarExcel(){
-    const banco = JSON.parse(localStorage.getItem("presenca") || "{}");
-    let csv = "Data,Nome,Status\n";
-
-    for(let data in banco){
-      for(let nome in banco[data]){
-        csv += `${data},${nome},${banco[data][nome]}\n`;
-      }
-    }
-
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "relatorio_presenca.csv";
-    a.click();
-  }
-
-  dataInput.addEventListener("change", render);
 </script>
 
 </body>
